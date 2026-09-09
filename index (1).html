@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Fairway Legends 3D — Advanced Golf Simulator</title>
+<style>
+:root{
+  --glass:rgba(8,17,24,.72);
+  --glass2:rgba(10,22,28,.9);
+  --line:rgba(255,255,255,.13);
+  --text:#f7faf8;
+  --muted:#aebdb7;
+  --gold:#f0c65c;
+  --green:#57bd74;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#09131b;color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+#game{position:fixed;inset:0}
+canvas{display:block}
+.ui{position:fixed;inset:0;pointer-events:none}
+.topbar{position:absolute;top:14px;left:16px;right:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand,.hud,.clubbar,.shotcard,.minimap,.scorecard,.mapmodal,.help,.toast{
+  background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 16px 40px rgba(0,0,0,.22)
+}
+.brand{pointer-events:auto;border-radius:14px;padding:10px 14px;font-weight:900;letter-spacing:.2px}
+.brand span{color:var(--gold)}
+.hud{display:flex;gap:7px;align-items:center;padding:7px;border-radius:14px}
+.hud .item{padding:5px 9px;border-right:1px solid rgba(255,255,255,.08);font-size:12px}
+.hud .item:last-child{border:0}
+.hud b{display:block;font-size:13px}
+.hud small{display:block;color:var(--muted);font-size:10px;margin-bottom:1px}
+.clubsWrap{position:absolute;top:14px;left:50%;transform:translateX(-50%);pointer-events:auto}
+.clubsTitle{border-radius:14px;padding:9px 18px;font-size:12px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase}
+.clubsMenu{margin-top:8px;width:370px;display:none;padding:11px;border-radius:16px;background:var(--glass2);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.clubsWrap.open .clubsMenu{display:block}
+.clubGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.clubBtn{pointer-events:auto;border:1px solid rgba(255,255,255,.08);background:#13232b;color:var(--text);border-radius:10px;padding:8px 5px;cursor:pointer;font-size:11px}
+.clubBtn:hover{background:#1b323d}
+.clubBtn.active{outline:2px solid var(--gold);background:#25333a}
+.clubBtn .clubNo{font-weight:900}
+.clubBtn .clubYd{color:var(--muted);font-size:10px;margin-top:2px}
+.side{position:absolute;left:16px;bottom:18px;width:270px;display:flex;flex-direction:column;gap:10px}
+.scorecard{pointer-events:auto;border-radius:16px;padding:12px}
+.scorecard h3{margin:0 0 9px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase}
+.scoregrid{display:grid;grid-template-columns:repeat(9,1fr);gap:4px;font-size:10px}
+.scoregrid div{background:rgba(255,255,255,.06);padding:5px 1px;text-align:center;border-radius:5px}
+.scoregrid .head{color:var(--muted);font-weight:700}
+.shotcard{pointer-events:auto;border-radius:16px;padding:12px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.value{font-weight:800}
+.range{width:100%;accent-color:var(--gold)}
+.primary{width:100%;margin-top:8px;border:0;background:linear-gradient(180deg,#f0c65c,#c99a30);color:#1c170a;font-weight:900;border-radius:11px;padding:10px;cursor:pointer}
+.secondary{width:100%;margin-top:7px;border:1px solid var(--line);background:#1a2b32;color:var(--text);font-weight:800;border-radius:11px;padding:9px;cursor:pointer}
+.right{position:absolute;right:16px;bottom:18px;display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+.minimap{width:190px;height:135px;border-radius:16px;padding:8px}
+.minimap canvas{position:relative;width:100%;height:100%;border-radius:10px}
+.help{pointer-events:auto;border-radius:14px;padding:9px 11px;font-size:11px;color:var(--muted);max-width:250px}
+.toast{position:absolute;left:50%;top:92px;transform:translateX(-50%);padding:9px 15px;border-radius:999px;font-size:12px;font-weight:800;opacity:0;transition:.2s}
+.toast.show{opacity:1}
+.bottomCenter{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);width:min(460px,48vw)}
+.status{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+.badge{background:var(--glass);border:1px solid var(--line);padding:7px 10px;border-radius:999px}
+.mapmodal{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:auto;background:rgba(3,9,12,.55)}
+.mapmodal.show{display:flex}
+.mapbox{width:min(760px,92vw);border-radius:20px;padding:18px;background:rgba(9,19,25,.95)}
+.mapbox h2{margin:0 0 3px}.mapbox p{margin:0 0 14px;color:var(--muted);font-size:12px}
+.maps{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.mapbtn{border:1px solid var(--line);border-radius:14px;background:#13232b;color:var(--text);padding:13px;text-align:left;cursor:pointer}
+.mapbtn:hover{background:#1a303a}.mapbtn.active{outline:2px solid var(--gold)}
+.mapbtn b{display:block;margin-bottom:4px}.mapbtn small{color:var(--muted)}
+.modalActions{display:flex;gap:8px;margin-top:14px}.modalActions button{flex:1}
+@media(max-width:900px){
+  .hud .item:nth-child(n+4){display:none}.clubsMenu{width:min(350px,92vw)}
+  .side{width:220px}.minimap{display:none}.help{display:none}.bottomCenter{width:58vw}
+}
+@media(max-width:650px){
+  .brand{display:none}.topbar{justify-content:center}.clubsWrap{top:8px}.hud{display:none}
+  .clubsTitle{padding:8px 15px}.side{left:9px;right:9px;bottom:9px;width:auto}.scorecard{display:none}
+  .shotcard{max-width:360px;margin:0 auto}.bottomCenter{bottom:225px;width:90vw}
+}
+</style>
+</head>
+<body>
+<div id="game"></div>
+
+<div class="ui">
+  <div class="topbar">
+    <div class="brand">⛳ <span>FAIRWAY LEGENDS</span> 3D</div>
+    <div class="hud">
+      <div class="item"><small>COURSE</small><b id="courseName">Pine Ridge</b></div>
+      <div class="item"><small>HOLE</small><b><span id="holeNo">1</span>/9</b></div>
+      <div class="item"><small>PAR</small><b id="par">4</b></div>
+      <div class="item"><small>STROKES</small><b id="strokes">0</b></div>
+      <div class="item"><small>WIND</small><b id="wind">6 mph</b></div>
+    </div>
+  </div>
+
+  <div class="clubsWrap" id="clubsWrap">
+    <button class="clubsTitle" id="clubsToggle">CLUBS ▾</button>
+    <div class="clubsMenu">
+      <div class="clubGrid" id="clubGrid"></div>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="scorecard">
+      <h3>Scorecard</h3>
+      <div class="scoregrid" id="scoregrid"></div>
+    </div>
+    <div class="shotcard">
+      <div class="row"><span class="label">Selected club</span><span class="value" id="selectedClub">Driver</span></div>
+      <div class="row" style="margin-top:9px"><span class="label">Power</span><span class="value" id="powerValue">78%</span></div>
+      <input id="power" class="range" type="range" min="10" max="100" value="78">
+      <div class="row" style="margin-top:8px"><span class="label">Aiming</span><span class="value">Mouse / Touch</span></div>
+      <button class="primary" id="hitBtn">SWING</button>
+      <button class="secondary" id="mapsBtn">CHANGE MAP</button>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="minimap"><canvas id="mini" width="350" height="230"></canvas></div>
+    <div class="help">Aim with the pointer. Adjust power, then swing. Wind bends the shot. Camera follows the ball after impact.</div>
+  </div>
+
+  <div class="bottomCenter">
+    <div class="status">
+      <div class="badge">Lie: <b id="lie">Tee</b></div>
+      <div class="badge">To pin: <b id="remaining">418 yd</b></div>
+      <div class="badge">Elevation: <b id="elevation">+6 ft</b></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="mapmodal" id="mapmodal">
+    <div class="mapbox">
+      <h2>Choose a course</h2>
+      <p>Each map uses different terrain, hazards, pin placement and wind behavior.</p>
+      <div class="maps" id="maps"></div>
+      <div class="modalActions">
+        <button class="secondary" id="closeMaps">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/controls/OrbitControls.js';
+
+const mount=document.getElementById('game');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9fc8d0);
+scene.fog=new THREE.FogExp2(0x9fc8d0,0.0028);
+
+const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,0.1,4000);
+camera.position.set(28,23,34);
+
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.15;
+mount.appendChild(renderer.domElement);
+
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+controls.maxPolarAngle=Math.PI*0.49;
+controls.minDistance=7;
+controls.maxDistance=110;
+
+const hemi=new THREE.HemisphereLight(0xdff2ff,0x5d754d,2.0);
+scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff4cf,4.0);
+sun.position.set(-90,140,70);
+sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-180;sun.shadow.camera.right=180;sun.shadow.camera.top=180;sun.shadow.camera.bottom=-180;
+scene.add(sun);
+
+const world=new THREE.Group();scene.add(world);
+const courseGroup=new THREE.Group();world.add(courseGroup);
+
+const COURSE_DATA=[
+ {name:'Pine Ridge',desc:'Rolling parkland with tall pines and deep bunkers.',base:0x3b7b43,rough:0x2a6138,water:0x2d8ca4,trees:0x214b2d,hazards:2},
+ {name:'Desert Mesa',desc:'Fast fairways, red rock, cactus and large waste bunkers.',base:0x8e9a55,rough:0x68733c,water:0x477f8a,trees:0x56633a,hazards:3},
+ {name:'Ocean Cliffs',desc:'Windy coastal holes with ocean, dunes and cliffside pins.',base:0x5e9950,rough:0x3d6e42,water:0x2d6f99,trees:0x2d4f35,hazards:2},
+ {name:'Highland Moor',desc:'Heather-covered links, stone walls and broad landing areas.',base:0x527f57,rough:0x405d47,water:0x587f86,trees:0x304f3c,hazards:3}
+];
+let mapIndex=0,holeIndex=0,strokes=0,scores=[],animating=false;
+let selectedKey='driver',power=0.78;
+let ball=new THREE.Vector3(-64,0.8,0);
+let pin=new THREE.Vector3(120,1.2,0);
+let aimPoint=new THREE.Vector3(20,0.7,0);
+let worldTarget=new THREE.Vector3();
+let wind={x:0,z:0,speed:6};
+let marker=null,ballMesh=null,flagMesh=null,trajectory=null,trees=[];
+
+const clubs=[
+ ['driver','Driver',245,0.99],['3wood','3 Wood',225,0.94],['5wood','5 Wood',210,0.90],['3hybrid','3 Hybrid',195,0.86],
+ ['4iron','4 Iron',185,0.82],['5iron','5 Iron',175,0.79],['6iron','6 Iron',165,0.76],['7iron','7 Iron',155,0.73],
+ ['8iron','8 Iron',145,0.70],['9iron','9 Iron',132,0.66],['pw','PW',120,0.62],['gw','GW',105,0.59],
+ ['sw','SW',90,0.54],['lw','LW',72,0.48],['putter','Putter',45,0.18]
+];
+
+function $(id){return document.getElementById(id)}
+function toast(msg){
+ const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.timer);
+ toast.timer=setTimeout(()=>t.classList.remove('show'),1800);
+}
+function clearGroup(g){while(g.children.length){g.remove(g.children[0])}}
+function mat(color,roughness=0.9,metalness=0){return new THREE.MeshStandardMaterial({color,roughness,metalness})}
+
+function makeTree(x,z,s=1,col=0x254d2e){
+ const g=new THREE.Group();
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.35*s,.48*s,3.6*s,7),mat(0x67442c));
+ trunk.position.y=1.8*s;trunk.castShadow=true;g.add(trunk);
+ for(let i=0;i<4;i++){
+  const c=new THREE.Mesh(new THREE.ConeGeometry((2.3-i*.28)*s,(4.2-i*.5)*s,8),mat(col));
+  c.position.y=(4.0+i*2.1)*s;c.castShadow=true;g.add(c);
+ }
+ g.position.set(x,0,z);return g;
+}
+function makeRock(x,z,s=1,col=0x806b58){
+ const m=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0),mat(col));
+ m.position.set(x,s*.55,z);m.scale.set(1.2,.75,.9);m.rotation.y=Math.random()*3;m.castShadow=true;return m;
+}
+function makeWater(x,z,w,d,color){
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({color,roughness:.2,metalness:.1,transparent:true,opacity:.88}));
+ m.rotation.x=-Math.PI/2;m.position.set(x,.04,z);return m;
+}
+function makeSand(x,z,w,d,rot=0){
+ const g=new THREE.Mesh(new THREE.CylinderGeometry(1,1,.05,48,1,false,0,Math.PI*2),mat(0xe1ca8a));
+ g.scale.set(w,d,1);g.rotation.y=rot;g.position.set(x,.05,z);return g;
+}
+function makeFlag(){
+ const g=new THREE.Group();
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,4.5,8),mat(0xdcdcd5));pole.position.y=2.25;pole.castShadow=true;g.add(pole);
+ const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.8,1.0),new THREE.MeshStandardMaterial({color:0xd83f36,side:THREE.DoubleSide}));
+ flag.position.set(.86,3.65,0);flag.rotation.y=Math.PI/2;g.add(flag);
+ return g;
+}
+function makeBall(){
+ const m=new THREE.Mesh(new THREE.SphereGeometry(.65,20,20),new THREE.MeshStandardMaterial({color:0xf7f7f2,roughness:.35}));
+ m.castShadow=true;return m;
+}
+
+function groundHeight(x,z){
+ const p=COURSE_DATA[mapIndex];
+ let h=0.7*Math.sin(x*.035)+0.55*Math.cos(z*.05)+0.25*Math.sin((x+z)*.08);
+ if(p.name==='Desert Mesa')h+=0.8*Math.sin(x*.018);
+ if(p.name==='Ocean Cliffs')h+=0.6*Math.cos(x*.025)+0.4*Math.sin(z*.03);
+ if(p.name==='Highland Moor')h+=0.45*Math.sin(x*.04-z*.02);
+ return h;
+}
+function buildTerrain(){
+ clearGroup(courseGroup);trees=[];marker=null;
+ const p=COURSE_DATA[mapIndex];
+ const ground=new THREE.Mesh(new THREE.PlaneGeometry(360,220,90,55),mat(p.rough));
+ ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;
+ const pos=ground.geometry.attributes.position;
+ for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getY(i);pos.setZ(i,groundHeight(x,z))}
+ pos.needsUpdate=true;ground.geometry.computeVertexNormals();courseGroup.add(ground);
+ // Main fairway
+ const fair=new THREE.Mesh(new THREE.PlaneGeometry(285,42,80,18),mat(p.base));
+ fair.rotation.x=-Math.PI/2;fair.position.y=.07;fair.receiveShadow=true;
+ const fp=fair.geometry.attributes.position;
+ for(let i=0;i<fp.count;i++){const x=fp.getX(i),z=fp.getY(i);fp.setZ(i,groundHeight(x,z)+.06)}
+ fp.needsUpdate=true;fair.geometry.computeVertexNormals();courseGroup.add(fair);
+
+ const tee=new THREE.Mesh(new THREE.BoxGeometry(20,0.3,22),mat(0x4d9151));tee.position.set(-65,.2,0);tee.receiveShadow=true;courseGroup.add(tee);
+ pin.set(118,groundHeight(118,0)+.9,0);
+
+ // green
+ const green=new THREE.Mesh(new THREE.CylinderGeometry(15,15,.18,64),mat(0x79aa59));green.position.set(pin.x,groundHeight(pin.x,pin.z)+.08,pin.z);green.scale.z=.72;green.receiveShadow=true;courseGroup.add(green);
+
+ // Hazards
+ const h=[[-8,16,26,17],[70,-15,26,12],[94,15,18,8]][0];
+ if(p.name==='Ocean Cliffs'){courseGroup.add(makeWater(45,60,230,70,p.water));courseGroup.add(makeWater(126,-58,100,40,p.water))}
+ else if(p.name==='Desert Mesa'){courseGroup.add(makeSand(35,20,54,12,-.15));courseGroup.add(makeRock(74,-17,8));courseGroup.add(makeRock(88,-13,5))}
+ else if(p.name==='Highland Moor'){courseGroup.add(makeWater(76,-18,38,16,p.water));courseGroup.add(makeSand(36,22,42,10,.2))}
+ else {courseGroup.add(makeSand(34,18,38,12,-.2));courseGroup.add(makeSand(88,-16,26,10,.1));}
+ // trees
+ for(let i=0;i<28;i++){
+  const x=-115+Math.random()*260, side=i%2?1:-1;
+  const z=side*(28+Math.random()*35);
+  if(Math.abs(x-pin.x)<18)continue;
+  const t=makeTree(x,z,.65+Math.random()*.65,p.trees);courseGroup.add(t);trees.push(t);
+ }
+ if(p.name==='Desert Mesa')for(let i=0;i<14;i++)courseGroup.add(makeRock(-100+Math.random()*230,-45+Math.random()*90,1+Math.random()*3,0x8b5d42));
+ if(p.name==='Ocean Cliffs'){
+  for(let i=0;i<7;i++){const rock=makeRock(-80+i*34,72+Math.random()*10,5+Math.random()*4,0x69747c);courseGroup.add(rock)}
+ }
+ // flag
+ flagMesh=makeFlag();flagMesh.position.copy(pin);courseGroup.add(flagMesh);
+ // ball
+ ballMesh=makeBall();ballMesh.position.copy(ball);courseGroup.add(ballMesh);
+ // target marker
+ marker=new THREE.Mesh(new THREE.RingGeometry(0.8,1.05,32),new THREE.MeshBasicMaterial({color:0xf0c65c,side:THREE.DoubleSide,transparent:true,opacity:.9}));
+ marker.rotation.x=-Math.PI/2;courseGroup.add(marker);
+ trajectory=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.55,dashSize:1,gapSize:.7}));
+ trajectory.material.depthTest=false;courseGroup.add(trajectory);
+}
+function newHole(){
+ strokes=0;animating=false;scores[holeIndex]=null;
+ const par=[4,5,3,4,4,3,5,4,4][holeIndex];
+ ball.set(-65,groundHeight(-65,0)+1.0,0);
+ const z=((holeIndex%3)-1)*9 + (Math.random()-.5)*8;
+ pin.z=z;pin.y=groundHeight(pin.x,pin.z)+.9;
+ wind.x=(Math.random()-.5)*12;wind.z=(Math.random()-.5)*5;wind.speed=Math.hypot(wind.x,wind.z);
+ camera.position.set(ball.x+15,22,ball.z+22);controls.target.set(ball.x+28,0,ball.z);controls.update();
+ $('holeNo').textContent=holeIndex+1;$('par').textContent=par;$('strokes').textContent=0;
+ $('wind').textContent=wind.speed.toFixed(0)+' mph';
+ $('lie').textContent='Tee';updateDistance();
+ buildTrajectory();
+ updateScorecard();
+ toast('Hole '+(holeIndex+1)+' • Par '+par);
+}
+function updateScorecard(){
+ const pars=[4,5,3,4,4,3,5,4,4];
+ $('scoregrid').innerHTML='';
+ for(let i=0;i<9;i++){
+  const h=document.createElement('div');h.className='head';h.textContent=i+1;$('scoregrid').appendChild(h);
+ }
+ for(let i=0;i<9;i++){
+  const d=document.createElement('div');d.textContent=scores[i]??'—';$('scoregrid').appendChild(d);
+ }
+}
+function updateDistance(){
+ const d=ball.distanceTo(pin)*2.0;
+ $('remaining').textContent=Math.max(1,Math.round(d))+' yd';
+ $('elevation').textContent=((pin.y-ball.y)*3).toFixed(0)+' ft';
+}
+function currentClub(){return clubs.find(c=>c[0]===selectedKey)}
+function updateLie(){
+ const x=ball.x,z=ball.z;
+ let lie='Fairway';
+ if(Math.abs(z)>23)lie='Rough';
+ if(Math.abs(x-pin.x)<15 && Math.abs(z-pin.z)<12)lie='Green';
+ if(Math.abs(x+8)<34 && Math.abs(z-18)<7)lie='Bunker';
+ if(Math.abs(x-88)<15 && Math.abs(z+16)<7)lie='Bunker';
+ if(x<-55)lie='Tee';
+ $('lie').textContent=lie;
+}
+function buildTrajectory(){
+ const c=currentClub();const pts=[];
+ const from=ball.clone();
+ const dir=pin.clone().sub(ball);dir.y=0;dir.normalize();
+ const side=new THREE.Vector3(-dir.z,0,dir.x);
+ const aimOffset=((mouseXNormalized-0.5)*40);
+ const target=pin.clone().add(side.multiplyScalar(aimOffset));
+ aimPoint.copy(target);
+ marker.position.copy(target);marker.position.y=groundHeight(target.x,target.z)+.18;
+ const dist=ball.distanceTo(target);
+ const powerFactor=Number(power);
+ const maxYards=c[2]*powerFactor;
+ const travel=Math.min(dist,maxYards/2.0);
+ for(let i=0;i<=22;i++){
+  const t=i/22;const x=THREE.MathUtils.lerp(from.x,target.x,t);const z=THREE.MathUtils.lerp(from.z,target.z,t);
+  const arc=Math.sin(Math.PI*t)*(c[0]==='putter'?0.1:4.4*(.55+powerFactor));
+  pts.push(new THREE.Vector3(x,Math.max(groundHeight(x,z)+.8,from.y+arc),z));
+ }
+ trajectory.geometry.dispose();trajectory.geometry=new THREE.BufferGeometry().setFromPoints(pts);
+}
+let mouseXNormalized=.5;
+renderer.domElement.addEventListener('pointermove',e=>{
+ const r=renderer.domElement.getBoundingClientRect();
+ mouseXNormalized=(e.clientX-r.left)/r.width;
+ if(!animating)buildTrajectory();
+});
+function swing(){
+ if(animating)return;
+ animating=true;$('hitBtn').disabled=true;
+ const c=currentClub();
+ const dir=pin.clone().sub(ball);dir.y=0;dir.normalize();
+ const side=new THREE.Vector3(-dir.z,0,dir.x);
+ const aimOffset=(mouseXNormalized-.5)*40;
+ const shotDir=dir.clone().add(side.multiplyScalar(aimOffset/115)).normalize();
+ const lie=$('lie').textContent;
+ const lieFactor=lie==='Rough'?.90:lie==='Bunker'?.65:lie==='Green'?.55:1;
+ const distance=c[2]*Number(power)*lieFactor/2.0;
+ const drift=new THREE.Vector3(wind.x,0,wind.z).multiplyScalar(.55*Number(power));
+ const end=ball.clone().add(shotDir.multiplyScalar(distance)).add(drift);
+ end.x=Math.max(-125,Math.min(145,end.x));end.z=Math.max(-65,Math.min(65,end.z));end.y=groundHeight(end.x,end.z)+.82;
+ const start=ball.clone();const t0=performance.now(),dur=850+distance*8;
+ const trail=[];
+ function animate(t){
+   const p=Math.min(1,(t-t0)/dur);const ease=p*p*(3-2*p);
+   const pos=start.clone().lerp(end,ease);
+   const arc=Math.sin(Math.PI*ease)*(c[0]==='putter'?0.25:Math.min(12,5+distance*.08));
+   pos.y=Math.max(groundHeight(pos.x,pos.z)+.7,start.y*(1-ease)+end.y*ease+arc);
+   ball.copy(pos);ballMesh.position.copy(ball);
+   trail.push(pos.clone()); if(trail.length>40)trail.shift();
+   const follow=ball.clone().add(shotDir.clone().multiplyScalar(13)).add(new THREE.Vector3(0,12,10));
+   camera.position.lerp(follow,.075);controls.target.lerp(ball,.10);controls.update();
+   renderer.render(scene,camera);
+   if(p<1)requestAnimationFrame(animate);else finish(end);
+ }
+ requestAnimationFrame(animate);
+}
+function finish(end){
+ ball.copy(end);ballMesh.position.copy(ball);strokes++;$('strokes').textContent=strokes;
+ updateLie();updateDistance();$('hitBtn').disabled=false;animating=false;
+ const pinDist=ball.distanceTo(pin);
+ if(pinDist<4.0){
+  ball.copy(pin);ballMesh.position.copy(ball);endHole();
+ }else{
+  toast(pinDist<20?'Great approach!':'Shot '+strokes+' • '+Math.round(pinDist*2)+' yd remaining');
+ }
+ buildTrajectory();
+}
+function endHole(){
+ const pars=[4,5,3,4,4,3,5,4,4];scores[holeIndex]=strokes;updateScorecard();
+ const d=strokes-pars[holeIndex];
+ const text=d<=-2?'EAGLE!':d===-1?'BIRDIE!':d===0?'PAR!':d===1?'BOGEY':d===2?'DOUBLE BOGEY':strokes+' STROKES';
+ toast(text);
+ setTimeout(()=>{
+   if(holeIndex<8){holeIndex++;newHole()}
+   else{
+    const total=scores.reduce((a,b)=>a+(b||0),0),parTotal=pars.reduce((a,b)=>a+b,0),delta=total-parTotal;
+    alert('Round complete!\\n'+total+' strokes on a par '+parTotal+' course.\\n'+(delta<=0?Math.abs(delta)+' under par!':delta+' over par.'));
+   }
+ },1200);
+}
+
+function setupClubs(){
+ const grid=$('clubGrid');
+ clubs.forEach(c=>{
+  const b=document.createElement('button');b.className='clubBtn';b.dataset.key=c[0];
+  b.innerHTML='<div class="clubNo">'+c[1]+'</div><div class="clubYd">'+c[2]+' yd</div>';
+  b.onclick=()=>{selectedKey=c[0];$('selectedClub').textContent=c[1];document.querySelectorAll('.clubBtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');$('clubsWrap').classList.remove('open');buildTrajectory();toast(c[1]+' selected')};
+  grid.appendChild(b);
+ });
+ grid.querySelector('[data-key="driver"]').classList.add('active');
+}
+setupClubs();
+$('clubsToggle').onclick=()=>$('clubsWrap').classList.toggle('open');
+$('power').oninput=e=>{power=+e.target.value/100;$('powerValue').textContent=e.target.value+'%';buildTrajectory()};
+$('hitBtn').onclick=swing;
+document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();swing()}});
+$('mapsBtn').onclick=()=>$('mapmodal').classList.add('show');
+$('closeMaps').onclick=()=>$('mapmodal').classList.remove('show');
+
+const maps=$('maps');
+COURSE_DATA.forEach((c,i)=>{
+ const b=document.createElement('button');b.className='mapbtn';b.innerHTML='<b>'+c.name+'</b><small>'+c.desc+'</small>';
+ b.onclick=()=>{mapIndex=i;$('courseName').textContent=c.name;$('mapmodal').classList.remove('show');holeIndex=0;scores=[];buildTerrain();newHole();toast(c.name+' loaded')};
+ maps.appendChild(b);
+});
+
+function updateMini(){
+ const m=$('mini'),c=m.getContext('2d'),w=m.width,h=m.height;
+ c.clearRect(0,0,w,h);c.fillStyle='#24492e';c.fillRect(0,0,w,h);
+ c.fillStyle='#6fa257';c.beginPath();c.moveTo(25,h/2-20);c.bezierCurveTo(w*.4,h*.35,w*.7,h*.58,w-20,h/2-6);c.lineTo(w-20,h/2+20);c.bezierCurveTo(w*.7,h*.78,w*.4,h*.62,25,h/2+15);c.closePath();c.fill();
+ c.fillStyle='#e1c785';c.beginPath();c.ellipse(155,88,25,9,.2,0,Math.PI*2);c.fill();
+ c.fillStyle='#fff';c.beginPath();c.arc(((ball.x+125)/270)*w,((ball.z+65)/130)*h,4,0,Math.PI*2);c.fill();
+ c.fillStyle='#e14b3b';c.beginPath();c.arc(((pin.x+125)/270)*w,((pin.z+65)/130)*h,4,0,Math.PI*2);c.fill();
+}
+function loop(){
+ requestAnimationFrame(loop);controls.update();updateMini();
+ if(!animating){ballMesh.position.copy(ball);marker.visible=true}
+ renderer.render(scene,camera);
+}
+newHole();loop();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
